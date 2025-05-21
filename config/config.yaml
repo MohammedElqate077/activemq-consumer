@@ -1,0 +1,21 @@
+broker:
+  host: "tcp://localhost:61616"
+  username: "admin"
+  password: "admin"
+
+producerSetting:
+  - queue_name: "campaigns_amq"
+    messageType: "campaign"
+    batchMessage: 5
+
+  - queue_name: "operations_amq"
+    messageType: "operation"
+    batchMessage: 8
+
+  - queue_name: "devices_amq"
+    messageType: "device"
+    batchMessage: 3
+
+scheduling:
+  period: 2
+  timeUnit: "SECONDS" # java.util.concurrent.TimeUnit enum
