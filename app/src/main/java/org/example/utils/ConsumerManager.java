@@ -6,17 +6,17 @@ import org.apache.activemq.ActiveMQConnectionFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import jakarta.jms.BytesMessage;
-import jakarta.jms.Connection;
-import jakarta.jms.Destination;
-import jakarta.jms.JMSException;
-import jakarta.jms.MapMessage;
-import jakarta.jms.Message;
-import jakarta.jms.MessageConsumer;
-import jakarta.jms.MessageListener;
-import jakarta.jms.ObjectMessage;
-import jakarta.jms.Session;
-import jakarta.jms.TextMessage;
+import javax.jms.BytesMessage;
+import javax.jms.Connection;
+import javax.jms.Destination;
+import javax.jms.JMSException;
+import javax.jms.MapMessage;
+import javax.jms.Message;
+import javax.jms.MessageConsumer;
+import javax.jms.MessageListener;
+import javax.jms.ObjectMessage;
+import javax.jms.Session;
+import javax.jms.TextMessage;
 
 public class ConsumerManager implements Runnable, Closeable {
    private final String BROKER_URL;
@@ -110,7 +110,7 @@ public class ConsumerManager implements Runnable, Closeable {
 
    }
 
-   private void processMessage(Message message) throws JMSException {
+   private static void processMessage(Message message) throws JMSException {
       if (message instanceof TextMessage textMessage) {
          System.out.println("Received text message: " + textMessage.getText());
          System.out.println("Message ID: " + message.getJMSMessageID());

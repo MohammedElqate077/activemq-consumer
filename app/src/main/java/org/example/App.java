@@ -1,30 +1,27 @@
 package org.example;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import javax.jms.ConnectionFactory;
 
+import org.apache.activemq.ActiveMQConnectionFactory;
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.extensions.gcp.options.GcpOptions;
+import org.apache.beam.sdk.io.jms.JmsIO;
 import org.apache.beam.sdk.options.Default;
 import org.apache.beam.sdk.options.Description;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
-import org.apache.beam.sdk.extensions.gcp.options.GcpOptions;
-
+import org.apache.beam.sdk.transforms.ParDo;
+import org.example.trasfromation.LogMessageFn;
+import org.example.trasfromation.ProceesMessages;
+import org.example.utils.Config;
+// import org.example.utils.ConsumerManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.example.utils.Config;
-import org.example.utils.ConsumerManager;
 
 public class App {
     private static final Logger logger = LoggerFactory.getLogger(App.class);
 
     public interface Options extends PipelineOptions, GcpOptions {
-        @Description("GCS input file pattern")
-        @Default.String("gs://your-bucket/your-file.csv")
-        String getInputFile();
-
-        void setInputFile(String value);
 
         @Description("Path to Consumer Config YAML file")
         @Default.String("/home/mohammed/Projects/IdeaProjects/activemq_apachebeam/consumer/config/config.yaml")
@@ -68,45 +65,33 @@ public class App {
                 .withValidation()
                 .as(Options.class);
 
-        logger.info("Input File: {}", options.getInputFile());
+        // logger.info("Input File: {}", options.getInputFile());
         logger.info("BigQuery Service Account Path: {}", options.getBqServiceAccountKeyPath());
         logger.info("BigQuery Destination: {}:{}:{}",
                 options.getBqProjectId(),
                 options.getBqDataset(),
                 options.getBqTable());
 
-        // TODO: Enable this when ready
-        DirectConsumer(options.getConsumerConfigFilePath());
+        // directConsumer(options.getConsumerConfigFilePath());
+        Pipeline pipeline = Pipeline.create(options);
+
+        Config config = Config.readConfigFromYaml(options.getConsumerConfigFilePath());
+
+        ConnectionFactory connectionFactory = new ActiveMQConnectionFactory(config.broker.host);
+
+        pipeline.apply("Read Messages from ActiveMQ",
+                JmsIO.read()
+                        .withConnectionFactory(connectionFactory)
+                        .withQueue(config.producerSetting.get(0).queue_name)
+                        .withUsername(config.broker.username)
+                        .withPassword(config.broker.password)
+            )
+            // .apply("Log Messages", ParDo.of(new LogMessageFn(logger)));
+            .apply("Log Messages", ParDo.of(new ProceesMessages(logger)));
+            
+        logger.info("Starting Apache Beam pipeline to consume from queue");
+        
+        pipeline.run();
     }
-
-    public static void DirectConsumer(String configPath) throws Exception {
-        Config config = Config.readConfigFromYaml(configPath);
-
-        for (Config.ProducerSetting producerSetting : config.producerSetting) {
-            ConsumerManager consumer = new ConsumerManager(
-                    config.broker.host,
-                    config.broker.username,
-                    config.broker.password);
-
-            consumer.connect();
-            consumer.setupConsumer(producerSetting.queue_name, producerSetting.messageType);
-
-            ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-            scheduler.scheduleAtFixedRate(
-                    consumer,
-                    0L,
-                    config.scheduling.period,
-                    TimeUnit.valueOf(config.scheduling.timeUnit));
-
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                try {
-                    scheduler.shutdown();
-                    consumer.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }));
-        }
-    }
-
+    
 }

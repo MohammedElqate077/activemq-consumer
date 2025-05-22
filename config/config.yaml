@@ -8,13 +8,13 @@ producerSetting:
     messageType: "campaign"
     batchMessage: 5
 
-  - queue_name: "operations_amq"
-    messageType: "operation"
-    batchMessage: 8
+  # - queue_name: "operations_amq"
+  #   messageType: "operation"
+  #   batchMessage: 8
 
-  - queue_name: "devices_amq"
-    messageType: "device"
-    batchMessage: 3
+  # - queue_name: "devices_amq"
+  #   messageType: "device"
+  #   batchMessage: 3
 
 scheduling:
   period: 2
